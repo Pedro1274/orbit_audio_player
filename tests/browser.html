@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Orbit browser smoke test</title>
+<style>body{font:15px system-ui;background:#111;color:#eee;padding:24px}iframe{width:100%;height:700px;border:1px solid #555}pre{white-space:pre-wrap}.pass{color:#c5f277}.fail{color:#ff9999}</style>
+<h1>Orbit browser smoke test</h1><p>Use a desktop browser. This test imports two generated WAV tones and briefly plays one.</p><button id="run" disabled>Run smoke test</button><pre id="results"></pre><iframe src="../index.html" title="Player under test"></iframe>
+<script type="module">
+const frame = document.querySelector('iframe'), run = document.querySelector('#run'), results = document.querySelector('#results');
+frame.onload = () => { run.disabled = false; };
+if (frame.contentDocument?.readyState === 'complete') run.disabled = false;
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function until(check) { for (let i = 0; i < 100; i++) { if (check()) return; await wait(100); } throw Error('Timed out waiting for player state'); }
+function wav(name, frequency) {
+ const rate = 8000, length = rate * 3, buffer = new ArrayBuffer(44 + length * 2), view = new DataView(buffer);
+ const text = (offset, s) => [...s].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
+ text(0, 'RIFF'); view.setUint32(4, buffer.byteLength - 8, true); text(8, 'WAVEfmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); text(36, 'data'); view.setUint32(40, length * 2, true);
+ for (let i = 0; i < length; i++) view.setInt16(44 + i * 2, Math.sin(2 * Math.PI * frequency * i / rate) * 500, true);
+ return new File([buffer], name, { type: 'audio/wav', lastModified: 1 });
+}
+run.onclick = async () => {
+ run.disabled = true; results.textContent = '';
+ const w = frame.contentWindow, d = frame.contentDocument, $ = id => d.getElementById(id);
+ const assert = (ok, label) => { if (!ok) throw Error(label); results.textContent += `PASS ${label}\n`; };
+ try {
+  $('clear').click();
+  const files = [wav('Alpha.wav', 220), wav('Beta.wav', 330)];
+  const upload = items => { const transfer = new DataTransfer(); items.forEach(f => transfer.items.add(f)); $('file-input').files = transfer.files; $('file-input').dispatchEvent(new w.Event('change')); };
+  upload(files);
+  await until(() => $('track-count').textContent === '2' && $('status').textContent.includes('Files stay'));
+  assert($('tracks').children.length === 2, 'imports playable WAV files');
+  upload(files); await wait(300); assert($('track-count').textContent === '2', 'skips duplicate files');
+  $('search').value = 'beta'; $('search').dispatchEvent(new w.Event('input')); assert($('tracks').children.length === 1, 'search filters tracks');
+  $('search').value = ''; $('search').dispatchEvent(new w.Event('input'));
+  $('tracks').querySelector('button').click();
+  await until(() => !$('audio').paused && $('audio').currentTime > 0);
+  assert($('now-title').textContent === 'Alpha', 'track selection starts playback');
+  $('play').click(); assert($('audio').paused, 'pause follows audio state');
+  $('seek').value = '1'; $('seek').dispatchEvent(new w.Event('input')); assert(Math.abs($('audio').currentTime - 1) < .2, 'seek updates playback time');
+  $('volume').value = '.3'; $('volume').dispatchEvent(new w.Event('input')); assert($('audio').volume === .3, 'volume updates audio');
+  $('mute').click(); assert($('audio').muted, 'mute toggles'); $('mute').click();
+  $('repeat').click(); assert($('repeat').getAttribute('aria-label') === 'Repeat: one', 'repeat one is available');
+  $('repeat').click(); $('repeat').click();
+  $('audio').dispatchEvent(new w.Event('ended')); await until(() => $('now-title').textContent === 'Beta'); assert(true, 'track end advances queue');
+  $('stop').click(); assert($('audio').paused && $('audio').currentTime === 0, 'stop pauses and resets');
+  $('shuffle').click(); assert($('queue').children.length === 2 && $('queue').firstElementChild.textContent.includes('Beta'), 'shuffle retains active track');
+  $('tracks').querySelector('.remove').click(); assert($('track-count').textContent === '1', 'track removal updates library');
+  $('clear').click(); assert($('track-count').textContent === '0' && !$('empty').hidden, 'clear restores empty state');
+  results.className = 'pass'; results.textContent += '\nAll browser checks passed.';
+ } catch (error) { results.className = 'fail'; results.textContent += `FAIL ${error.message}\n`; }
+ finally { $('audio').pause(); run.disabled = false; }
+};
+</script></html>
