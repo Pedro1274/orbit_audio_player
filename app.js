@@ -84,7 +84,7 @@ async function play() {
 }
 function selectTrack(id, shouldPlay = true) {
   const track = tracks.get(id); if (!track) return;
-  if (current !== id) { current = id; audio.src = track.url; audio.load(); }
+  if (current !== id) { current = id; audio.src = track.url; audio.load(); audio.playbackRate = Number($('speed').value); }
   else if (audio.ended) audio.currentTime = 0;
   // Call play immediately during the user gesture; do not await metadata.
   if (shouldPlay) void play();
@@ -156,6 +156,11 @@ $('next').onclick = () => advance();
 $('previous').onclick = () => { if (audio.currentTime > 3) { audio.currentTime = 0; return; } const position = order.indexOf(current); selectTrack(order[position > 0 ? position - 1 : repeat === 'all' ? order.length - 1 : 0]); };
 $('seek').oninput = event => { if (Number.isFinite(audio.duration)) { audio.currentTime = Number(event.target.value); syncPlayer(); } };
 $('volume').oninput = event => { audio.volume = Number(event.target.value); audio.muted = false; };
+$('speed').onchange = () => {
+  audio.defaultPlaybackRate = audio.playbackRate = Number($('speed').value);
+  status(`Playback speed: ${$('speed').value}×.`);
+};
+audio.addEventListener('ratechange', () => { $('speed').value = String(audio.playbackRate); });
 $('mute').onclick = () => { audio.muted = !audio.muted; };
 audio.addEventListener('volumechange', () => { const muted = audio.muted || audio.volume === 0; $('mute').setAttribute('aria-pressed', String(muted)); $('mute').setAttribute('aria-label', muted ? 'Unmute' : 'Mute'); $('mute').textContent = muted ? '◖×' : '◖))'; $('volume').value = audio.volume; $('volume-value').textContent = `${Math.round((audio.muted ? 0 : audio.volume) * 100)}%`; });
 $('shuffle').onclick = () => { shuffle = !shuffle; order = shuffle ? shuffled([...tracks.keys()], current) : [...tracks.keys()]; $('shuffle').setAttribute('aria-pressed', String(shuffle)); render(); status(`Shuffle ${shuffle ? 'on' : 'off'}.`); };

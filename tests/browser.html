@@ -35,9 +35,15 @@ run.onclick = async () => {
   $('seek').value = '1'; $('seek').dispatchEvent(new w.Event('input')); assert(Math.abs($('audio').currentTime - 1) < .2, 'seek updates playback time');
   $('volume').value = '.3'; $('volume').dispatchEvent(new w.Event('input')); assert($('audio').volume === .3, 'volume updates audio');
   $('mute').click(); assert($('audio').muted, 'mute toggles'); $('mute').click();
+  $('speed').value = '1.5'; $('speed').dispatchEvent(new w.Event('change'));
+  assert($('audio').playbackRate === 1.5, 'speed control updates playback rate');
   $('repeat').click(); assert($('repeat').getAttribute('aria-label') === 'Repeat: one', 'repeat one is available');
   $('repeat').click(); $('repeat').click();
   $('audio').dispatchEvent(new w.Event('ended')); await until(() => $('now-title').textContent === 'Beta'); assert(true, 'track end advances queue');
+  await until(() => $('audio').readyState >= 1);
+  assert($('audio').playbackRate === 1.5 && $('speed').value === '1.5', 'speed persists when advancing tracks');
+  $('speed').value = '1'; $('speed').dispatchEvent(new w.Event('change'));
+  assert($('audio').playbackRate === 1, 'normal playback speed can be restored');
   $('stop').click(); assert($('audio').paused && $('audio').currentTime === 0, 'stop pauses and resets');
   $('shuffle').click(); assert($('queue').children.length === 2 && $('queue').firstElementChild.textContent.includes('Beta'), 'shuffle retains active track');
   $('tracks').querySelector('.remove').click(); assert($('track-count').textContent === '1', 'track removal updates library');

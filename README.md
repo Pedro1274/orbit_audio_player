@@ -30,6 +30,7 @@ Serve the files over HTTP; opening `index.html` directly does not reliably load 
 - MP3, WAV, AAC, OGG, and FLAC extensions are accepted; other extensions and duplicate files are skipped.
 - Click a track in the library or queue to play it. Search by title, artist, or album.
 - Play/pause, stop, previous/next, scrub, adjust volume, or mute from the bottom bar.
+- Choose a playback speed from **0.5× to 2×** next to the volume control. Speed stays selected across track changes for the current session.
 - Shuffle rearranges the visible queue while keeping the current track first. Turning it off restores import order.
 - Repeat cycles **off → one → all**. Repeat one applies to natural track endings; Next still advances.
 - Previous restarts after three seconds of playback; otherwise it selects the preceding track.
@@ -74,7 +75,7 @@ ID3 versions, FLAC comments/artwork, WAV INFO, Ogg comments, and malformed tags.
 
 With the server running, open **http://localhost:8000/tests/browser.html** and click
 **Run smoke test**. It generates two quiet WAV files locally and checks import,
-deduplication, search, playback, seek, volume, mute, automatic queue advancement,
+deduplication, search, playback, seek, volume, mute, playback speed and its retention across tracks, automatic queue advancement,
 shuffle, removal, and clear. This may briefly play a tone.
 
 Also manually check real tagged files in all five formats, embedded artwork,
